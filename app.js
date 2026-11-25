@@ -14,6 +14,8 @@ const dec = n => D.decisions.find(d => d.n === n);
 const fmOk = r => Math.abs(r[2] - r[3]) <= Math.max(5000, 0.01 * r[3]); // workbook rule: within 1% or $5,000
 const secHead = (h, p, right = "") => `<div class="sec-head"><div><h2>${h}</h2>${p ? `<p>${p}</p>` : ""}</div>${right}</div>`;
 const table = (cols, rows, numCols = []) => `<div class="tblwrap"><table class="tbl"><thead><tr>${cols.map((c, i) => `<th class="${numCols.includes(i) ? "num" : ""}">${c}</th>`).join("")}</tr></thead><tbody>${rows.map(r => `<tr class="${r.cls || ""}">${(r.cells || r).map((c, i) => `<td class="${numCols.includes(i) ? "num" : ""}">${c}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+// Secondary detail stays one click away; state.open keeps it open across re-renders
+const more = (k, title, html) => `<details class="ev more" data-k="${k}" ${state.open[k] ? "open" : ""}><summary><span style="flex:1">${title}</span></summary><div class="body">${html}</div></details>`;
 const empty = (h, p) => `<div class="emptyst"><h3>${h}</h3><p class="small">${p}</p>${tag("na")}</div>`;
 
 /* ---------- Charts (reusable SVG) ---------- */
@@ -68,7 +70,7 @@ function matrixSvg(sel) {
 /* ---------- Views ---------- */
 const V = {};
 let state = { root: "R1", evType: "all", evClock: "all", evText: "", chain: null, rec: 1, phase: null, kpiTier: "all", kpiClock: "all",
-  votes: {}, calc: { cap: 590000, u: 80, m: 6 }, pay: "stack", aff: { cash: "", ceil: 3, sc: 2, lines: {} }, cost: "All", sal: 0, extra: 0, seg: 0 };
+  votes: {}, calc: { cap: 590000, u: 80, m: 6 }, pay: "stack", aff: { cash: "", ceil: 3, sc: 2, lines: {} }, open: {}, cost: "All", sal: 0, extra: 0, seg: 0 };
 
 V.briefing = () => {
   const items = ["3 MONTHS TO LISTING", "590,000 BPD · ONE SITE · RAMPING UP", "≈50 EXECUTIVES · THREE JOBS", "70% OF GROUP EXECUTIVE TIME ON NEP", "$4.70M YEAR ONE AT TARGET (ASSUMPTION)", "5 BOARD DECISIONS · 90 DAYS"];
@@ -80,7 +82,7 @@ V.briefing = () => {
   <div class="ticker" aria-hidden="true"><div>${tick}${tick}</div></div>
   <section class="hero2">
     <div class="l">
-      <div class="kicker">№ 00 — The answer · ${esc(D.meta.event)}</div>
+      <div class="kicker">00 · Briefing · ${esc(D.meta.event)}</div>
       <h1>Three clocks.<br>One owner each.<br><em>One set of books</em> everyone can trust.</h1>
       <p class="lede" style="margin:0 0 12px;font-size:20px;color:var(--ink)">NEP should reach listing day run by its own operators, with economics its independent directors can verify.</p>
       <div class="small muted">${tag("rec")} ${src("1–3")} · Prepared for ${esc(D.meta.audience)}</div>
@@ -91,15 +93,8 @@ V.briefing = () => {
       <p class="small muted" style="margin:0;border-top:1px solid var(--ink);padding-top:10px">Deck cover motif: the LIST clock nearly at twelve, inside the PROTECT ring — verify before money moves.</p>
     </div>
   </section>
-  <section class="ask2">
-    <div class="five" aria-hidden="true">5</div>
-    <div class="t"><h2>Board decisions in the first <em>90 days.</em></h2><p>${esc(D.ask)}</p>
-      <div class="row"><a class="btn gold" href="#decision">Enter the Decision Room →</a><a class="btn line" href="#workbench">Stress-test the numbers</a></div></div>
-  </section>
   <div class="sec">${secHead("<span class=\"kicker\" style=\"color:var(--ink);font-size:13px\">Situation</span>", "", "<span class=\"src\">Case facts · slide 3</span>")}
     <div class="facts2">${fact("3", " mo", "to listing — an independent Board, RemCo and continuous disclosure arrive with it")}${fact("590", "k bpd", "one refinery and petrochemicals site, early ramp-up; ambition ≈1.1m bpd")}${fact("≈50", "", "executives run operations, the IPO and the expansion between them")}${fact("70%", "", "of the Group executive team's time goes to NEP", true)}</div></div>
-  <div class="sec">${secHead("<span class=\"kicker\" style=\"color:var(--ink);font-size:13px\">Diagnosis → Response</span>", "", "<span class=\"src\">Hypotheses · tests open · slide 4</span>")}
-    <div class="ledger">${D.roots.map(r => { const [it, pre, post] = italic[r.id]; return `<a href="#diagnosis" data-root="${r.id}"><span class="id">${r.id}</span><h3>${pre}<em>${it}</em>${post}</h3><p><b>So we:</b> ${r.intervention}</p><span class="test">Test<br>${r.test.split(/[:;]/)[0]}</span></a>`; }).join("")}</div></div>
   <section class="sec price">
     <div style="flex:1 1 340px;display:flex;flex-direction:column;gap:8px"><span class="kicker" style="color:var(--ink);font-size:13px">Year-one price tag</span><span class="bignum">$4.70m</span><span class="mono">At target · $5.88m at maximum payout · ${tag("assumption")} · slides 12, 17</span></div>
     <div style="flex:2 1 520px;display:flex;flex-direction:column;gap:14px">
@@ -110,15 +105,34 @@ V.briefing = () => {
       </div>
       <p style="margin:0">Released only if programme cash at maximum is <b>≤3% of available cash</b> — at least $196.1m. NEP's available cash is <span style="border-bottom:2px dashed var(--gold)">not in the case</span> ${tag("na")}</p>
     </div></section>
-  <div class="sec">${secHead("<span class=\"kicker\" style=\"color:var(--ink);font-size:13px\">Contents</span>", "", "<span class=\"src\">Each module answers one question</span>")}
-    <ol class="toc">${ROUTES.slice(1).map(r => `<li><a href="#${r.id}" class="${r.id === "decision" ? "hot" : ""}"><span class="n">${r.n}</span><span class="nm">${r.short}</span><span class="dots"></span><span class="q">${r.d}</span></a></li>`).join("")}</ol></div>`;
+  <section class="ask2 sec">
+    <div class="five" aria-hidden="true">5</div>
+    <div class="t"><h2>Board decisions in the first <em>90 days.</em></h2><p>${esc(D.ask)}</p>
+      <div class="row"><a class="btn gold" href="#diagnosis">Start: what is wrong →</a><a class="btn line" href="#decision">Skip to the five decisions</a></div></div>
+  </section>
+`;
 };
 
 V.diagnosis = () => {
   const r = D.roots.find(x => x.id === state.root);
   return `
-  <div class="kicker">Module 01</div><h1>Business Challenge & Diagnosis</h1>
-  <p class="lede">What NIP and NEP are trying to solve, broken into testable hypotheses.</p>
+  <div class="kicker">01 · What is wrong</div><h1>Three causes, three tests</h1>
+  <p class="lede">Six symptoms, three causes. Each cause is a hypothesis with a 30-day test that could prove it wrong. Select one.</p>
+  <div class="sec">${secHead("Hypothesis tree", "Select a root-cause hypothesis to see its evidence, consequence, intervention and the test that could prove it wrong", src(4))}
+    <div class="tree"><div class="rootq"><div class="kicker">Central question</div><p>Why can't NEP's leadership run, build and list at the same time — and what must change before listing day?</p></div>
+      <div class="branches">${D.roots.map(x => `<div class="branch"><button class="node ${x.id === r.id ? "on" : ""}" data-root="${x.id}"><span class="k">${x.id} · HYPOTHESIS</span><h3 style="margin:4px 0 0">${x.h}</h3></button><div class="subqs">${x.qs.map(q => `<div>${q}</div>`).join("")}</div></div>`).join("")}</div></div>
+    <div class="detail" id="rootDetail">
+      <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px"><div><span class="kicker">${r.id} · root-cause analysis</span><h2 style="margin-top:4px">${r.h}</h2></div>
+        <div><span class="status" data-tip="The deck defines the test; no test result exists yet">● Open — test defined, not yet run</span></div></div>
+      <div class="flow">
+        <div><h4>Symptoms in the case</h4><p>${r.symptoms}</p>${tag("fact")}</div>
+        <div><h4>Business consequence</h4><p>${r.consequence}</p>${tag("analysis")}</div>
+        <div><h4>Proposed intervention</h4><p>${r.intervention}</p>${tag("rec")} <span class="src">${r.ref}</span></div>
+        <div><h4>Evidence to confirm or reject</h4><p>${r.test}</p>${tag("rec")}</div>
+        <div><h4>Board decisions</h4>${r.decisions.map(n => `<p><a href="#recommendations" data-rec="${n}">${n}. ${dec(n).h}</a></p>`).join("")}</div>
+      </div></div>
+  </div>
+  ${more("diag", "More detail: background, scope and design principles", `
   <div class="grid g2">
     <div class="panel"><h3>Business background</h3>
       <ul class="clean"><li>NEP is a 590,000 bpd single-site refinery and petrochemicals complex in early ramp-up, with an ambition of about 1.1 million bpd. ${tag("fact")} ${src(3)}</li>
@@ -135,22 +149,8 @@ V.diagnosis = () => {
     <div>${secHead("Project objectives")}<ul class="clean">${D.objectives.map(o => `<li>${o}</li>`).join("")}</ul></div>
     <div>${secHead("Scope and limitations", "", src(D.scope.s))}<div class="grid g2"><div><h3>In scope</h3><ul class="clean small">${D.scope.in.map(x => `<li>${x}</li>`).join("")}</ul></div><div><h3>Excluded</h3><ul class="clean small muted">${D.scope.out.map(x => `<li>${x}</li>`).join("")}</ul></div></div></div>
   </div>
-  <div class="sec">${secHead("Hypothesis tree", "Select a root-cause hypothesis to see its evidence, consequence, intervention and the test that could prove it wrong", src(4))}
-    <div class="tree"><div class="rootq"><div class="kicker">Central question</div><p>Why can't NEP's leadership run, build and list at the same time — and what must change before listing day?</p></div>
-      <div class="branches">${D.roots.map(x => `<div class="branch"><button class="node ${x.id === r.id ? "on" : ""}" data-root="${x.id}"><span class="k">${x.id} · HYPOTHESIS</span><h3 style="margin:4px 0 0">${x.h}</h3></button><div class="subqs">${x.qs.map(q => `<div>${q}</div>`).join("")}</div></div>`).join("")}</div></div>
-    <div class="detail" id="rootDetail">
-      <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px"><div><span class="kicker">${r.id} · root-cause analysis</span><h2 style="margin-top:4px">${r.h}</h2></div>
-        <div><span class="status" data-tip="The deck defines the test; no test result exists yet">● Open — test defined, not yet run</span></div></div>
-      <div class="flow">
-        <div><h4>Symptoms in the case</h4><p>${r.symptoms}</p>${tag("fact")}</div>
-        <div><h4>Business consequence</h4><p>${r.consequence}</p>${tag("analysis")}</div>
-        <div><h4>Proposed intervention</h4><p>${r.intervention}</p>${tag("rec")} <span class="src">${r.ref}</span></div>
-        <div><h4>Evidence to confirm or reject</h4><p>${r.test}</p>${tag("rec")}</div>
-        <div><h4>Board decisions</h4>${r.decisions.map(n => `<p><a href="#recommendations" data-rec="${n}">${n}. ${dec(n).h}</a></p>`).join("")}</div>
-      </div></div>
-  </div>
   <div class="sec">${secHead("Design principles", "The rules every intervention is tested against", src(4))}
-    <div class="grid" style="grid-template-columns:repeat(5,minmax(0,1fr))">${D.principles.map(([k, t]) => `<div class="panel"><div class="kicker">${k}</div><p style="margin:6px 0 0">${t}</p></div>`).join("")}</div></div>`;
+    <div class="grid" style="grid-template-columns:repeat(5,minmax(0,1fr))">${D.principles.map(([k, t]) => `<div class="panel"><div class="kicker">${k}</div><p style="margin:6px 0 0">${t}</p></div>`).join("")}</div></div>`)}`;
 };
 
 V.research = () => {
@@ -158,7 +158,7 @@ V.research = () => {
   const counts = Object.keys(D.types).map(t => ({ l: D.types[t].label, v: D.evidence.filter(e => e.t === t).length, c: `var(--t-${t})`, t }));
   const chips = (key, vals) => vals.map(([v, l]) => `<button class="chip ${state[key] === v ? "on" : ""}" data-f="${key}" data-v="${v}">${l}</button>`).join("");
   return `
-  <div class="kicker">Module 02</div><h1>Research & Intelligence</h1>
+  <div class="kicker">Appendix A1</div><h1>Research & Intelligence</h1>
   <p class="lede">Every claim in the engagement, typed by evidence class and traced to its source slide.</p>
   <div class="grid g2">
     <div class="panel"><h3>Evidence register by type</h3><p class="small muted">Click a bar to filter the register.</p><div id="evbars">${hbars(counts.map(c => ({ ...c, tip: c.l + ": " + c.v + " items — click to filter" })), { lw: 120, w: 520 })}</div></div>
@@ -187,45 +187,46 @@ V.research = () => {
 };
 
 V.workbench = () => `
-  <div class="kicker">№ 03 — Analytical Workbench</div><h1>Move the <em>numbers.</em></h1>
+  <div class="kicker">03 · The money</div><h1>Move the <em>numbers.</em></h1>
   <p class="lede">Do the numbers hold if I move them? Three questions a director will ask, then the detail behind them. Every input is a labelled planning assumption from the deck — <b>not an NEP result.</b></p>
   <section class="terminal">
     <div class="kicker" style="color:var(--gold-hi)">Q1 · Assumption · appendix A7, slide 21</div>
     <h2 style="font-size:44px;margin:6px 0 4px">What is one point of utilisation worth?</h2>
     <p class="small" style="color:#A3A9B4;margin-bottom:28px">Throughput = capacity × utilisation × 365. Contribution proxy = throughput × assumed margin.</p>
     <div class="calc"><div id="calcCtl"></div><div id="calcOut"></div></div></section>
-  <div class="sec grid g2">
-    <div class="panel">${secHead("First-year payout scenarios ($m)", "", `<div class="seg" id="paySeg"><button data-p="stack" class="${state.pay === "stack" ? "on" : ""}">Components</button><button data-p="cash" class="${state.pay === "cash" ? "on" : ""}">Cash needed at 3%</button></div>`)}
-      <div id="payChart"></div><p class="note">Downside: performance below threshold; service half of tranche 1 still paid. Maximum: STI and bridge performance at 150%. ${src(12)}</p></div>
+  <div class="sec">
     <div class="panel">${secHead("<em class=\"q-em\">Q2</em> Can NEP afford it?", "The conditional affordability test", tag("rec") + " " + src(12))}
       <p class="small"><b>Available cash</b> = operating cash flow − maintenance capex − scheduled debt service − contractual obligations − committed expansion funding − liquidity buffer. It is <b>not</b> Q1's contribution proxy.</p>
       <div id="affCtl"></div><div id="affOut"></div>
-      <details class="ev"><summary><span style="flex:1">Or build available cash from NEP's own figures ($m)</span></summary><div class="body" id="affLines"></div></details>
+      <details class="ev"><summary><span style="flex:1">Build it from NEP's own figures ($m)</span></summary><div class="body" id="affLines"></div></details>
       <p class="note">NEP's available cash is not in the case ${tag("na")}. Drag the slider or enter NEP's figures (the workbook's yellow cells). 3% is a proposed Board guardrail, not an industry standard.</p></div>
   </div>
+  <div class="sec">${secHead("<em class=\"q-em\">Q4</em> Does every number tie back?", `One set of books. Slide figure as rounded vs the workbook formula result. Passes within 1% or $5,000 — <b>${D.figureMap.filter(fmOk).length}/${D.figureMap.length} OK</b>`, `<span class="src" data-tip="${esc(D.meta.workbook)}, Deck figure map">Workbook</span>`)}
+    <div class="grid" style="grid-template-columns:1.6fr 1fr">
+      <details class="ev panel" style="padding:0;align-self:start"><summary style="padding:14px 18px"><span style="flex:1"><b>Deck figure map</b> — ${D.figureMap.length} figures with their source cells</span></summary><div class="body">${table(["Slide", "Figure", "On slide", "Workbook", "Source cell", "Check"], D.figureMap.map(r => [r[0], r[1], usd(r[2]), usd(r[3]), `<span class="small">${r[4]}</span>`, fmOk(r) ? `<b style="color:var(--ok)">OK</b>` : `<b style="color:var(--bad)">CHECK</b>`]), [0, 2, 3])}</div></details>
+      <div class="panel"><h3>First-year cash by Board decision (target)</h3>${hbars(D.decisionCosts.map((v, i) => ({ l: "Decision " + (i + 1), v: v / 1e6, c: "var(--gold)", tip: dec(i + 1).h + ": " + usd(v) })), { fmt: m2, lw: 100, w: 420 })}<p class="small"><b>Total ${usd(D.decisionCosts.reduce((a, b) => a + b, 0))}</b> = the $4.70m at target.</p>${tag("assumption")} ${src(14)}</div></div></div>
+  ${more("wb", "More detail: what moves the cost, payout scenarios, exposure, cohorts and decision rights", `
   <div class="sec">${secHead("<em class=\"q-em\">Q3</em> What moves the cost?", "Itemised build behind the $4.70m at target, and its sensitivities", `<div class="seg" id="costSeg">${["All", "One-off", "Recurring", "Incentive"].map(t => `<button data-c="${t}" class="${state.cost === t ? "on" : ""}">${t}</button>`).join("")}</div>`)}
     <div class="grid" style="grid-template-columns:1.6fr 1fr"><div class="panel" id="costChart"></div>
       <div class="panel"><h3>Salary and cohort sensitivity</h3><div id="salCtl"></div><div id="salOut"></div><p class="note">Transition costs held fixed; STI and bridge scale with salaries. ${src(17)}</p></div></div></div>
-  <div class="sec">${secHead("One set of books: every deck figure, checked", `Slide figure as rounded vs the workbook formula result. Passes within 1% or $5,000 — <b>${D.figureMap.filter(fmOk).length}/${D.figureMap.length} OK</b>`, `<span class="src" data-tip="${esc(D.meta.workbook)}, Deck figure map">Workbook</span>`)}
-    <div class="grid" style="grid-template-columns:1.6fr 1fr">
-      <details class="ev panel" style="padding:0;align-self:start"><summary style="padding:14px 18px"><span style="flex:1"><b>Deck figure map</b> — ${D.figureMap.length} figures with their source cells</span></summary><div class="body">${table(["Slide", "Figure", "On slide", "Workbook", "Source cell", "Check"], D.figureMap.map(r => [r[0], r[1], usd(r[2]), usd(r[3]), `<span class="small">${r[4]}</span>`, fmOk(r) ? `<b style="color:var(--ok)">OK</b>` : `<b style="color:var(--bad)">CHECK</b>`]), [0, 2, 3])}</div></details>
-      <div class="panel"><h3>First-year cash by Board decision (target)</h3>${hbars(D.decisionCosts.map((v, i) => ({ l: "Decision " + (i + 1), v: v / 1e6, c: "var(--gold)", tip: dec(i + 1).h + ": " + usd(v) })), { fmt: m2, lw: 100, w: 420 })}<p class="small"><b>Total ${usd(D.decisionCosts.reduce((a, b) => a + b, 0))}</b> = the $4.70m at target.</p>${tag("assumption")} ${src(14)}</div></div>
+  <div class="sec grid g2">
+    <div class="panel">${secHead("First-year payout scenarios ($m)", "", `<div class="seg" id="paySeg"><button data-p="stack" class="${state.pay === "stack" ? "on" : ""}">Components</button><button data-p="cash" class="${state.pay === "cash" ? "on" : ""}">Cash needed at 3%</button></div>`)}
+      <div id="payChart"></div><p class="note">Downside: performance below threshold; service half of tranche 1 still paid. Maximum: STI and bridge performance at 150%. ${src(12)}</p></div>
     <div class="panel" style="margin-top:16px"><h3>Maximum payout exposure — cash and non-cash separated</h3>
       ${table(["Commitment", "Target", "Maximum", "Timing and form"], [...D.maxExposure.map(r => [r[0], usd(r[1]), usd(r[2]), r[3]]), { cls: "total", cells: ["Total cash commitments shown", usd(D.maxExposure.reduce((a, r) => a + r[1], 0)), usd(D.maxExposure.reduce((a, r) => a + r[2], 0)), ""] }, [`<span class="muted">${D.maxExposureLti[0]}</span>`, usd(D.maxExposureLti[1]), usd(D.maxExposureLti[2]), D.maxExposureLti[3]]], [1, 2])}
-      <p class="note">The bridge line is the full 36-month commitment, not the year-one tranche inside the $4.70m. ${tag("assumption")}</p></div></div>
+      <p class="note">The bridge line is the full 36-month commitment, not the year-one tranche inside the $4.70m. ${tag("assumption")}</p></div>
+  </div>
   <div class="sec">${secHead("Segmentation: pay by executive cohort", "Select a cohort. Bridge, STI and LTI opportunity are deck assumptions; mix is derived.", src("10–11, 17"))}
     <div class="seg" id="segSeg" style="margin-bottom:14px">${D.lti.map((s, i) => `<button data-s="${i}" class="${state.seg === i ? "on" : ""}">${s.n}</button>`).join("")}</div>
     <div class="grid g2"><div class="panel" id="segOut"></div><div class="panel"><h3>Performance-share scorecard (60% of LTI)</h3>${hbars(D.scorecard.map(s => ({ l: s.k, v: s.w, c: color(s.c), tip: s.k + " — " + s.w + "%: " + s.m })), { fmt: v => v + "%", lw: 200, w: 520, max: 40 })}<p class="note">Gate: a serious process-safety event or serious compliance failure lets RemCo reduce to zero. ${src(11)}</p></div></div></div>
   <div class="sec">${secHead("Diagnostic framework: decision-rights matrix", "Who decides what once NEP is listed", tag("rec") + " " + src(6))}
     ${table(D.decisionRights.cols, D.decisionRights.rows.map(r => [`<b>${r[0]}</b>`, ...r.slice(1)]))}</div>
-  <div class="sec">${secHead("Diagnostic framework: variable pay by business archetype", "", tag("rec") + " " + src(13))}
-    ${table(["", ...D.archetypes.cols], D.archetypes.rows.map(r => [`<b>${r[0]}</b>`, ...r.slice(1)]))}</div>
   <div class="sec">${secHead("Key analytical findings")}
     <div class="grid g3">
       <div class="panel"><h3>Value at stake is operational</h3><p class="small">At an illustrative $3/bbl, one utilisation point ≈ $6.46m a year; at $9/bbl ≈ $19.38m. Reliability is the first thing pay should reward.</p>${tag("analysis")} ${src(21)}</div>
       <div class="panel"><h3>The programme is small against the value at stake</h3><p class="small">$4.70m first-year cash at target versus $6.46m–$19.38m per utilisation point — but this is a sensitivity, not proof of ROI.</p>${tag("analysis")} ${src("12, 21")}</div>
       <div class="panel"><h3>Affordability is unproven</h3><p class="small">The programme passes only if available cash is at least $196.1m at maximum payout; capacity alone does not show this.</p>${tag("analysis")} ${src(12)}</div>
-    </div></div>`;
+    </div></div>`)}`;
 
 function mountWorkbench(el) {
   const c = state.calc;
@@ -332,7 +333,7 @@ V.insights = () => {
   const ch = D.chains.find(c => c.id === state.chain);
   const cols = ["Business problem", "Evidence", "Analysis", "Insight", "Strategic implication"];
   return `
-  <div class="kicker">Module 04</div><h1>Strategic Insights</h1>
+  <div class="kicker">Appendix A2</div><h1>Strategic Insights</h1>
   <p class="lede">How each piece of evidence becomes a decision. Select any row to trace a chain end to end.</p>
   ${secHead("Insight map", "Business Problem → Evidence → Analysis → Insight → Strategic Implication", ch ? `<button class="btn ghost" id="clearChain">Show all chains</button>` : "")}
   <div class="imap ${ch ? "focus" : ""}">${cols.map(c => `<div class="colh">${c}</div>`).join("")}
@@ -365,8 +366,25 @@ V.recommendations = () => {
   const quad = d.impact >= 4 && d.cx <= 3 ? "Move first" : d.impact >= 4 ? "Major programme — sequence carefully" : d.cx <= 3 ? "Quick fix" : "Question value";
   const chains = D.chains.filter(c => c.d.includes(d.n));
   return `
-  <div class="kicker">Module 05</div><h1>Recommendation Studio</h1>
+  <div class="kicker">04 · Reward</div><h1>Pay people to stay, then to perform</h1>
   <div class="statement" style="margin:6px 0 28px"><p>${esc(D.recommendation)}</p></div>
+  <div class="sec">${secHead("Three plans, three purposes", "Every outcome is paid once, by one plan", src(9))}
+    ${table(["", ...D.plans.map(p => p.n)], [["Purpose", "purpose"], ["Pays for", "pays"], ["Never pays for", "never"], ["Horizon", "horizon"], ["Vehicle", "vehicle"]].map(([l, k]) => [`<b>${l}</b>`, ...D.plans.map(p => p[k])]))}</div>
+  <div class="sec grid g2">
+    <div>${secHead("Pre-IPO retention bridge", "$2.14m cash bridge for 16 named executives over 36 months, inside a hard $2.57m pool cap", tag("assumption") + " " + src(10))}
+      ${(() => { const R = D.bridgeReserve, P = D.bridgePool, tv = D.bridge.reduce((a, b) => a + b.tv, 0), mx = D.bridge.reduce((a, b) => a + b.mx, 0);
+        return table(["Cohort", "Execs", "Base", "Target (36m)", "Target value", "Max value"], [...D.bridge.map(b => [b.n, b.e, "$" + b.base.toFixed(3) + "m", b.pct + "%", usd(b.tv), usd(b.mx)]), { cls: "total", cells: ["Named cohort", 16, "$5.100m", "–", usd(tv), usd(mx)] }, [R.n, "up to " + R.e, "$" + R.base.toFixed(3) + "m", R.pct + "%", usd(R.tv), usd(R.mx)], { cls: "total", cells: ["Pool cap (hard)", "up to 22", "$" + P.payroll.toFixed(3) + "m", "–", usd(P.tv), usd(P.mx)] }], [1, 2, 3, 4, 5]); })()}
+      <p class="note">Three equal annual tranches of $712,500 at 12, 24 and 36 months from grant (listing +9, +21, +33) — 17.5% and 10% of base a year. Service half pays for verified continuity; performance half 0/50/100/150%. Anyone beyond the cap needs Board approval and a new affordability test; unused reserve lapses at listing +6 months. Accounted as an employee benefit (IAS 19 under IFRS), not IFRS 2.</p></div>
+    <div>${secHead("Post-IPO LTI annual grant", "60% performance shares, 40% restricted shares", tag("assumption") + " " + src(11))}
+      ${table(["Participant", "Base", "Grant", "Target value"], [...D.lti.map(l => [l.n, "$" + l.base.toFixed(3) + "m", l.pct + "%", usd(l.tv)]), { cls: "total", cells: ["Total", "$5.100m", "–", usd(2580000)] }], [1, 2, 3])}
+      <h3 style="margin-top:16px">What the CEO receives, at grant price</h3>
+      ${table(["Performance outcome", "Shares that vest", "CEO LTI value", "vs target"], D.ltiOutcomes.map(r => [r[0], r[1], usd(r[2]), r[3] + "%"]), [2, 3])}
+      ${(() => { const t = D.ceoMix.reduce((a, r) => a + r[1], 0), fx = Math.round(D.ceoMix[0][1] / t * 100); return `<p class="small">CEO target pay <b>${usd(t)}</b>: ${D.ceoMix.map(r => `${r[0]} ${Math.round(r[1] / t * 100)}%`).join(" · ")} — <b>${fx}% fixed, ${100 - fx}% variable</b>.</p>`; })()}
+      <p class="note">A 40% floor even at zero performance; 130% ceiling. Performance shares cliff-vest after three years; restricted shares vest a third a year to month 36. Relative TSR: 25th percentile 50%, median 100%, 75th 150%; capped at 100% if absolute TSR is negative. Why no options: a refiner's share price follows the margin cycle. RemCo discretion within ±20% with reasons disclosed.</p></div>
+  </div>
+  <div class="sec">${secHead("For the wider Group", "NEP is the governance reference point, not the pay template", tag("rec") + " " + src(13))}
+    ${table(["", ...D.archetypes.cols], D.archetypes.rows.map(r => [`<b>${r[0]}</b>`, ...r.slice(1)]))}</div>
+  ${more("rec", "More detail: prioritisation matrix, PROTECT safeguards and bridge terms", `
   ${secHead("Prioritisation matrix", "Impact against implementation complexity. Select a decision.", tag("analysis"))}
   <p class="note" style="margin:-6px 0 16px">The deck makes all five first-90-day decisions and does not score them. Positions here are this app's interpretation from each decision's cost, dependencies and legal conditions — challenge them.</p>
   <div class="matrix">
@@ -388,35 +406,22 @@ V.recommendations = () => {
       <dt>Priority</dt><dd>First 90 days (deck) · ${quad} (matrix)</dd>
     </dl>
   </div>
-  <div class="sec">${secHead("Supporting recommendation: three plans, three purposes", "Every outcome is paid once, by one plan", src(9))}
-    ${table(["", ...D.plans.map(p => p.n)], [["Purpose", "purpose"], ["Pays for", "pays"], ["Never pays for", "never"], ["Horizon", "horizon"], ["Vehicle", "vehicle"]].map(([l, k]) => [`<b>${l}</b>`, ...D.plans.map(p => p[k])]))}</div>
-  <div class="sec grid g2">
-    <div>${secHead("Pre-IPO retention bridge", "$2.14m cash bridge for 16 named executives over 36 months, inside a hard $2.57m pool cap", tag("assumption") + " " + src(10))}
-      ${(() => { const R = D.bridgeReserve, P = D.bridgePool, tv = D.bridge.reduce((a, b) => a + b.tv, 0), mx = D.bridge.reduce((a, b) => a + b.mx, 0);
-        return table(["Cohort", "Execs", "Base", "Target (36m)", "Target value", "Max value"], [...D.bridge.map(b => [b.n, b.e, "$" + b.base.toFixed(3) + "m", b.pct + "%", usd(b.tv), usd(b.mx)]), { cls: "total", cells: ["Named cohort", 16, "$5.100m", "–", usd(tv), usd(mx)] }, [R.n, "up to " + R.e, "$" + R.base.toFixed(3) + "m", R.pct + "%", usd(R.tv), usd(R.mx)], { cls: "total", cells: ["Pool cap (hard)", "up to 22", "$" + P.payroll.toFixed(3) + "m", "–", usd(P.tv), usd(P.mx)] }], [1, 2, 3, 4, 5]); })()}
-      <p class="note">Three equal annual tranches of $712,500 at 12, 24 and 36 months from grant (listing +9, +21, +33) — 17.5% and 10% of base a year. Service half pays for verified continuity; performance half 0/50/100/150%. Anyone beyond the cap needs Board approval and a new affordability test; unused reserve lapses at listing +6 months. Accounted as an employee benefit (IAS 19 under IFRS), not IFRS 2.</p></div>
-    <div>${secHead("Post-IPO LTI annual grant", "60% performance shares, 40% restricted shares", tag("assumption") + " " + src(11))}
-      ${table(["Participant", "Base", "Grant", "Target value"], [...D.lti.map(l => [l.n, "$" + l.base.toFixed(3) + "m", l.pct + "%", usd(l.tv)]), { cls: "total", cells: ["Total", "$5.100m", "–", usd(2580000)] }], [1, 2, 3])}
-      <h3 style="margin-top:16px">What the CEO receives, at grant price</h3>
-      ${table(["Performance outcome", "Shares that vest", "CEO LTI value", "vs target"], D.ltiOutcomes.map(r => [r[0], r[1], usd(r[2]), r[3] + "%"]), [2, 3])}
-      ${(() => { const t = D.ceoMix.reduce((a, r) => a + r[1], 0), fx = Math.round(D.ceoMix[0][1] / t * 100); return `<p class="small">CEO target pay <b>${usd(t)}</b>: ${D.ceoMix.map(r => `${r[0]} ${Math.round(r[1] / t * 100)}%`).join(" · ")} — <b>${fx}% fixed, ${100 - fx}% variable</b>.</p>`; })()}
-      <p class="note">A 40% floor even at zero performance; 130% ceiling. Performance shares cliff-vest after three years; restricted shares vest a third a year to month 36. Relative TSR: 25th percentile 50%, median 100%, 75th 150%; capped at 100% if absolute TSR is negative. Why no options: a refiner's share price follows the margin cycle. RemCo discretion within ±20% with reasons disclosed.</p></div>
-  </div>
   <div class="sec">${secHead("Supporting recommendation: five PROTECT safeguards", "Due-diligence safeguards, not findings that current arrangements are defective", tag("rec") + " " + src(6))}
     ${table(["Safeguard", "What it requires", "Accountable", "Evidence required", "Deadline"], D.safeguards.map((s, i) => [`<b>${i + 1}. ${s.n}</b>`, s.req, s.own, s.ev, s.due]))}</div>
   <div class="sec">${secHead("Bridge terms if circumstances change", "", src(15))}
-    <details class="ev"><summary><span style="flex:1">Delay, cancellation, leaver, safety-gate and clawback terms (Appendix A1)</span></summary><div class="body">${table(["If", "Then"], D.bridgeTerms)}</div></details></div>`;
+    <details class="ev"><summary><span style="flex:1">Delay, cancellation, leaver, safety-gate and clawback terms (Appendix A1)</span></summary><div class="body">${table(["If", "Then"], D.bridgeTerms)}</div></details></div>`)}`;
 };
 
 V.implementation = () => {
   const ph = state.phase;
   return `
-  <div class="kicker">Module 06</div><h1>Implementation Command Centre</h1>
+  <div class="kicker">02 · The answer</div><h1>One owner per clock</h1>
   <p class="lede">Authority moves before listing, governance switches on at listing, and money is released gate by gate.</p>
-  <div class="panel" style="display:flex;gap:24px;align-items:center;flex-wrap:wrap;margin-bottom:20px">
-    <div><span class="state">Proposed</span> <b>${D.timeline.length * 5}</b> activities</div>
-    <div><span class="state" style="border-style:solid;border-color:var(--navy);color:var(--navy)">Completed</span> <b>0</b> activities</div>
-    <p class="small muted" style="margin:0;flex:1">This is a proposal to the Board. No implementation activity has been reported as complete.</p></div>
+  <div class="sec" style="margin-top:0">${secHead("Who owns each clock", "The NEP CEO owns all three, with no Group approval line. PROTECT runs across them", tag("rec") + " " + src(5))}
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">${D.clocks.map(c => `<div class="panel">${clk(c.id)}<h3 style="margin:10px 0 4px">${c.owner}</h3><p class="small" style="margin:0">${c.desc}</p></div>`).join("")}</div></div>
+  <div class="sec">${secHead("Where each Group executive goes", "NIP keeps capital, related-party approvals and enterprise risk through reserved matters and nominees", tag("rec") + " " + src(5))}
+    ${table(["Category", "Executive", "Role and end date"], D.transitions)}</div>
+  <p class="small muted">All ${D.timeline.length * 5} roadmap activities are proposed; none is reported complete.</p>
   ${secHead("Roadmap", "Select a phase to focus it", tag("rec") + " " + src(8))}
   <div class="tl ${ph != null ? "focus" : ""}">
     <div class="ph" style="cursor:default">Workstream</div>${D.phases.map((p, i) => `<button class="ph ${ph === i ? "on" : ""}" data-ph="${i}">${p}</button>`).join("")}
@@ -426,30 +431,29 @@ V.implementation = () => {
     <p class="small">Group executive time on NEP: <b>${(D.groupTime[ph].t === "fact" ? "" : "≤") + D.groupTime[ph].v}%</b> ${tag(D.groupTime[ph].t)}</p>
     ${table(["Workstream", "Owner", "Milestone"], D.timeline.map(r => [clk(r.ws), r.own, r.cells[ph]]))}
     <p style="margin-top:12px">${ph > 0 ? `<button class="btn ghost" data-ph="${ph - 1}">← ${D.phases[ph - 1]}</button> ` : ""}${ph < 4 ? `<button class="btn ghost" data-ph="${ph + 1}">${D.phases[ph + 1]} →</button>` : ""}</p></div>` : ""}
+  <div class="sec">${secHead("Succession: emergency cover by day 30", "Two-deep cover for COO and Technical by listing +6 months. Cover is by role; the case names no individuals.", tag("rec") + " " + src(7))}
+    ${table(["Role", "Emergency cover (day 30)", "Ready-now criteria", "External search trigger", "Ready-later pipeline", "Readiness evidence"], D.succession.map(r => [`<b>${r[0]}</b>`, ...r.slice(1)]))}
+    <p class="note">If succession fails: a COO or Technical vacancy in ramp-up leaves no one with authority to stop or restart units, and one site cannot move the volume elsewhere. Assessment and development: $138,000 in year one. ${src("7, 18")}</p></div>
+  ${more("impl", "More detail: Group time, spending gates, communication, resources and risks", `
   <div class="sec grid g2">
     <div class="panel">${secHead("Group executive time on NEP", "70% today (fact); proposed ceilings thereafter")}${stepLine(D.groupTime)}</div>
     <div class="panel">${secHead("Spending gates", "Money is released only when each gate passes")}
       ${D.timeline.find(r => r.ws === "GATES").cells.map((c, i) => `<p class="small"><b>${D.phases[i]}</b> — ${c}</p>`).join("")}${tag("rec")} ${src(8)}</div>
   </div>
-  <div class="sec">${secHead("Responsibilities: where each Group executive goes", "", tag("rec") + " " + src(5))}
-    ${table(["Category", "Executive", "Role and end date"], D.transitions)}</div>
-  <div class="sec">${secHead("Succession: emergency cover by day 30", "Two-deep cover for COO and Technical by listing +6 months. Cover is by role; the case names no individuals.", tag("rec") + " " + src(7))}
-    ${table(["Role", "Emergency cover (day 30)", "Ready-now criteria", "External search trigger", "Ready-later pipeline", "Readiness evidence"], D.succession.map(r => [`<b>${r[0]}</b>`, ...r.slice(1)]))}
-    <p class="note">If succession fails: a COO or Technical vacancy in ramp-up leaves no one with authority to stop or restart units, and one site cannot move the volume elsewhere. Assessment and development: $138,000 in year one. ${src("7, 18")}</p></div>
   <div class="sec">${secHead("Communication: named individuals first, in writing", "Nobody learns their terms in a group or from a rumour", tag("rec") + " " + src("9, 22"))}
     ${table(["Audience", "What they need to hear", "Messenger", "When", "Channel"], D.comms.map(r => [`<b>${r[0]}</b>`, ...r.slice(1)]))}
     <p class="note">Feedback loop: 30-day pulse check of all 50 executives; regretted exits and open questions reported to RemCo monthly until listing +6 months.</p></div>
   <div class="sec grid g2">
     <div>${secHead("Resource requirements", "", tag("assumption") + " " + src("5, 17"))}${table(["Resource", "Cost", "Implication"], D.resources)}</div>
     <div>${secHead("Risk mitigation", "Each decision carries a reopening trigger")}${table(["Decision", "Reconsider if"], D.decisions.map(d => [d.n + ". " + d.h.split(" ").slice(0, 6).join(" ") + "…", d.re]))}</div>
-  </div>`;
+  </div>`)}`;
 };
 
 V.performance = () => {
   const list = D.kpiDefs.filter(k => (state.kpiTier === "all" || k.tier === state.kpiTier) && (state.kpiClock === "all" || k.c === state.kpiClock));
   const chip = (key, v, l) => `<button class="chip ${state[key] === v ? "on" : ""}" data-f="${key}" data-v="${v}">${l}</button>`;
   return `
-  <div class="kicker">Module 07</div><h1>Performance Intelligence</h1>
+  <div class="kicker">Appendix A3</div><h1>Performance Intelligence</h1>
   <p class="lede">How the Board will know the solution is working. Targets come from the deck; there is no actual performance data yet.</p>
   <div class="verdict none" style="margin-bottom:24px">No actual results are shown anywhere on this page. Baselines depend on the 30-day time and escalation logs, which have not been reported.</div>
   <div class="filters">${chip("kpiTier", "all", "All KPIs")}${chip("kpiTier", "Strategic", "Strategic")}${chip("kpiTier", "Operational", "Operational")}<span class="sep"></span>
@@ -481,39 +485,44 @@ V.decision = () => {
   <div class="stance" role="status" aria-label="Board stance simulation"><b>BOARD STANCE · SIMULATION</b><span>${nA} APPROVED</span><span>${nH} HELD</span><span>${5 - nA - nH} UNDECIDED</span>
     <div class="track" aria-hidden="true"><div style="width:${nA * 20}%;background:var(--ink)"></div><div style="width:${nH * 20}%;background:var(--card)"></div></div>
     <button class="btn ghost" data-vote="reset">RESET</button></div>
-  <div class="kicker">№ 08 — Executive Decision Room</div>
+  <div class="kicker">05 · The ask</div>
   <h1>Approve the architecture.<br><em>Verify</em> before money moves.</h1>
-  <section class="argument sec" aria-label="The argument in four steps">
-    ${step("i.", "The challenge", esc(D.challenge))}
-    ${step("ii.", "What we established", "70% of Group executive time goes to NEP, decisions escalate to Group, and retention promises are inconsistent. " + tag("fact"))}
-    ${step("iii.", "What it means", "Key-person risk is value risk on one site, and every outcome must be paid once, by one plan. " + tag("analysis"))}
-    ${step("iv.", "Our direction", esc(D.recommendation), "last")}
-  </section>
   <div class="sec">${secHead("<span class=\"kicker\" style=\"color:var(--ink);font-size:13px\">The five decisions · first 90 days</span>", "", "<span class=\"src\">Recommendation · slide 14 · stances are a simulation, not a record</span>")}
     ${D.decisions.map(d => { const s = v[d.n] || ""; return `<article class="dcard ${s}"><div class="bigN" aria-hidden="true">${d.n}</div>
       <div class="main"><h3>${d.h}</h3><p class="src" style="border:0">OWNER · ${d.own}</p><p><b>Next:</b> ${d.act}</p><p class="small"><b>Success:</b> ${d.ok}</p><p><a href="#recommendations" data-rec="${d.n}" class="src">Why this decision →</a></p></div>
       <div class="aside"><div class="cells"><div><span class="k">YEAR ONE · ASSUMPTION</span><b style="font-family:var(--mono)">${d.fin.split(":")[0]}</b></div><div><span class="k">EVIDENCE FIRST</span>${d.ev}</div></div>
         <p class="re" style="margin:0"><span class="k">REOPEN IF · </span>${d.re}</p>
         <div class="vote" role="group" aria-label="Board stance on decision ${d.n}"><button class="a ${s === "a" ? "on" : ""}" aria-pressed="${s === "a"}" data-vote="${d.n}:a">Approve</button><button class="h ${s === "h" ? "on" : ""}" aria-pressed="${s === "h"}" data-vote="${d.n}:h">Hold</button></div></div></article>`; }).join("")}</div>
+  <section class="closer"><p><em>$4.70m</em> at target, $5.88m at maximum — <i>paid only once it's verified.</i></p><a class="btn gold" href="#briefing">← Back to the briefing</a></section>
+  ${more("dec", "More detail: the argument in four steps and how money is released", `
+  <section class="argument sec" aria-label="The argument in four steps">
+    ${step("i.", "The challenge", esc(D.challenge))}
+    ${step("ii.", "What we established", "70% of Group executive time goes to NEP, decisions escalate to Group, and retention promises are inconsistent. " + tag("fact"))}
+    ${step("iii.", "What it means", "Key-person risk is value risk on one site, and every outcome must be paid once, by one plan. " + tag("analysis"))}
+    ${step("iv.", "Our direction", esc(D.recommendation), "last")}
+  </section>
   <div class="sec">${secHead("<span class=\"kicker\" style=\"color:var(--ink);font-size:13px\">How money is released</span>", "", "<span class=\"src\">All proposed · none passed · slide 8</span>")}
     <ol class="gates">${gates.map((g, i) => `<li><div class="st"><b>${i}</b>${i < 3 ? "<i></i>" : ""}</div><span class="when">${gateWhen[i].toUpperCase()}</span><span>${g.split(": ").slice(1).join(": ").replace(/^./, c => c.toUpperCase())}.</span></li>`).join("")}</ol></div>
-  <section class="closer"><p><em>$4.70m</em> at target, $5.88m at maximum — <i>paid only once it's verified.</i></p><a class="btn gold" href="#briefing">← Back to the briefing</a></section>`;
+`)}`;
 };
 
+// Main routes follow the Board pitch; `app` routes are reference material outside the guided path
 const ROUTES = [
   { id: "briefing", n: "00", short: "Briefing", t: "Executive Briefing", d: "What is the answer?" },
-  { id: "diagnosis", n: "01", short: "Diagnosis", t: "Business Challenge & Diagnosis", d: "What is actually wrong?" },
-  { id: "research", n: "02", short: "Research", t: "Research & Intelligence", d: "What do we know, and from where?" },
-  { id: "workbench", n: "03", short: "Workbench", t: "Analytical Workbench", d: "Do the numbers hold if I move them?", mount: mountWorkbench },
-  { id: "insights", n: "04", short: "Insights", t: "Strategic Insights", d: "How does evidence become a decision?" },
-  { id: "recommendations", n: "05", short: "Recommendations", t: "Recommendation Studio", d: "What first, and why?" },
-  { id: "implementation", n: "06", short: "Implementation", t: "Implementation Command Centre", d: "Who does what, by when?" },
-  { id: "performance", n: "07", short: "Performance", t: "Performance Intelligence", d: "How will we know it works?" },
-  { id: "decision", n: "08", short: "Decision Room", t: "Executive Decision Room", d: "What must the Board decide?" },
+  { id: "diagnosis", n: "01", short: "What's wrong", t: "Diagnosis", d: "What is actually wrong?" },
+  { id: "implementation", n: "02", short: "The answer", t: "The Answer", d: "Who owns what, and by when?" },
+  { id: "workbench", n: "03", short: "The money", t: "The Money", d: "Can NEP afford it, and do the numbers hold?", mount: mountWorkbench },
+  { id: "recommendations", n: "04", short: "Reward", t: "Reward", d: "How are people paid to stay and perform?" },
+  { id: "decision", n: "05", short: "The ask", t: "Decision Room", d: "What must the Board decide?" },
+  { id: "research", n: "A1", short: "Evidence", t: "Research & Evidence", d: "What do we know, and from where?", app: true },
+  { id: "insights", n: "A2", short: "Insights", t: "Strategic Insights", d: "How does evidence become a decision?", app: true },
+  { id: "performance", n: "A3", short: "KPIs", t: "Performance Intelligence", d: "How will we know it works?", app: true },
 ];
+const MAIN = ROUTES.filter(r => !r.app);
 
 /* ---------- Shell: nav, router, events ---------- */
-$("#nav").innerHTML = ROUTES.map(r => `<a href="#${r.id}" data-id="${r.id}"><b>${r.n}</b>${r.short}</a>`).join("");
+const navA = r => `<a href="#${r.id}" data-id="${r.id}"><b>${r.n}</b>${r.short}</a>`;
+$("#nav").innerHTML = MAIN.map(navA).join("") + `<span class="nav-sep">Appendix</span>` + ROUTES.filter(r => r.app).map(navA).join("");
 $("#legend").innerHTML = `<strong>EVIDENCE KEY</strong>` + Object.keys(D.types).map(tag).join("") + `<span class="note2">${esc(D.meta.caveat)}</span>`;
 
 const cur = () => ROUTES.find(r => r.id === location.hash.slice(1)) || ROUTES[0];
@@ -522,11 +531,12 @@ function render(keepScroll) {
   view.innerHTML = V[r.id]();
   r.mount && r.mount(view);
   $$("#nav a").forEach(a => a.classList.toggle("on", a.dataset.id === r.id));
-  $("#crumbs").innerHTML = r.id === "briefing" ? `<strong>Executive Briefing</strong>` : `<a href="#briefing">Executive Briefing</a><span>/</span>Module ${r.n}<span>/</span><strong>${r.t}</strong>`;
-  const i = ROUTES.indexOf(r);
-  $("#step").textContent = `${i + 1} / ${ROUTES.length}`;
-  $("#progress div").style.width = ((i + 1) / ROUTES.length) * 100 + "%";
-  $("#prev").disabled = i === 0; $("#next").disabled = i === ROUTES.length - 1;
+  $("#crumbs").innerHTML = r.id === "briefing" ? `<strong>Executive Briefing</strong>` : `<a href="#briefing">Executive Briefing</a><span>/</span>${r.app ? "Appendix" : "Step"} ${r.n}<span>/</span><strong>${r.t}</strong>`;
+  const i = MAIN.indexOf(r), nx = MAIN[i + 1];
+  $("#step").textContent = r.app ? "Appendix" : `${i + 1} / ${MAIN.length}`;
+  $("#progress div").style.width = r.app ? "0%" : ((i + 1) / MAIN.length) * 100 + "%";
+  $("#prev").disabled = i <= 0; $("#next").disabled = !r.app && !nx;
+  $("#next").textContent = r.app ? "Back to the pitch →" : nx ? `Next: ${nx.short} →` : "Next →";
   document.title = `${r.t} · Wakanda Command Centre`;
   keepScroll ? scrollTo(0, y) : scrollTo(0, 0);
 }
@@ -541,12 +551,13 @@ $("#view").addEventListener("click", e => {
   else if (t.dataset.root) { state.root = t.dataset.root; rerender(); }
   else if (t.dataset.f) { state[t.dataset.f] = t.dataset.v; rerender(); }
   else if (t.dataset.chain) { state.chain = state.chain === t.dataset.chain ? null : t.dataset.chain; rerender(); }
-  else if (t.dataset.rec) { state.rec = +t.dataset.rec; if (cur().id === "recommendations") { e.preventDefault(); rerender(); } }
+  else if (t.dataset.rec) { state.rec = +t.dataset.rec; state.open.rec = true; if (cur().id === "recommendations") { e.preventDefault(); rerender(); } }
   else if (t.dataset.ph) { state.phase = state.phase === +t.dataset.ph && t.classList.contains("ph") ? null : +t.dataset.ph; rerender(); }
   else if (t.classList.contains("mpt")) { state.rec = +t.dataset.n; rerender(); }
   else if (t.id === "clearChain") { state.chain = null; rerender(); }
   else if (t.tagName === "rect") { const i = $$("#evbars rect").indexOf(t); const k = Object.keys(D.types)[i]; state.evType = state.evType === k ? "all" : k; rerender(); }
 });
+$("#view").addEventListener("toggle", e => { if (e.target.dataset && e.target.dataset.k) state.open[e.target.dataset.k] = e.target.open; }, true);
 $("#view").addEventListener("keydown", e => { if (e.key === "Enter" && e.target.dataset.chain) e.target.click(); });
 $("#view").addEventListener("input", e => { if (e.target.id === "evText") { state.evText = e.target.value; rerender(); const i = $("#evText"); i.focus(); i.setSelectionRange(i.value.length, i.value.length); } });
 
@@ -556,7 +567,7 @@ document.addEventListener("mouseover", e => { const t = e.target.closest("[data-
 document.addEventListener("mousemove", e => { if (!tip.classList.contains("on")) return; const x = Math.min(e.clientX + 14, innerWidth - tip.offsetWidth - 8); tip.style.left = x + "px"; tip.style.top = e.clientY + 16 + "px"; });
 
 // Presentation mode
-const go = d => { const i = ROUTES.indexOf(cur()) + d; if (ROUTES[i]) location.hash = ROUTES[i].id; };
+const go = d => { const i = MAIN.indexOf(cur()); location.hash = (i < 0 ? MAIN[0] : MAIN[i + d] || MAIN[i]).id; };
 const setPresent = on => { document.body.classList.toggle("present", on); $("#present").setAttribute("aria-pressed", on); $("#present").textContent = on ? "Exit guided briefing" : "Start guided briefing"; if (on && cur().id !== "briefing") location.hash = "briefing"; };
 $("#present").onclick = () => setPresent(!document.body.classList.contains("present"));
 $("#prev").onclick = () => go(-1); $("#next").onclick = () => go(1);
@@ -575,9 +586,9 @@ function buildIndex() {
     });
   });
   // hidden detail states (other roots, chains, decisions, phases) are indexed via the data directly
-  D.roots.forEach(x => index.push({ r: ROUTES[1], s: `${x.id} ${x.h}: ${x.consequence} ${x.test}`, set: { root: x.id } }));
-  D.chains.forEach(x => index.push({ r: ROUTES[4], s: `${x.id} ${x.i} ${x.m}`, set: { chain: x.id } }));
-  D.decisions.forEach(x => index.push({ r: ROUTES[5], s: `Decision ${x.n}: ${x.h} — ${x.benefit}. ${x.deps}`, set: { rec: x.n } }));
+  D.roots.forEach(x => index.push({ r: ROUTES.find(r => r.id === "diagnosis"), s: `${x.id} ${x.h}: ${x.consequence} ${x.test}`, set: { root: x.id } }));
+  D.chains.forEach(x => index.push({ r: ROUTES.find(r => r.id === "insights"), s: `${x.id} ${x.i} ${x.m}`, set: { chain: x.id } }));
+  D.decisions.forEach(x => index.push({ r: ROUTES.find(r => r.id === "recommendations"), s: `Decision ${x.n}: ${x.h} — ${x.benefit}. ${x.deps}`, set: { rec: x.n } }));
   Object.assign(state, JSON.parse(saved));
 }
 function search() {

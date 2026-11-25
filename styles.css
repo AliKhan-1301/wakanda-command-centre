@@ -354,3 +354,9 @@ body.present #legend{display:none}
   .toc .q{display:none}.rec-card dl{grid-template-columns:1fr}
 }
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* Pitch order: appendix divider in the nav, and collapsed detail panels */
+.nav-sep{display:flex;align-items:center;padding:0 10px 0 18px;margin-left:8px;border-left:1px solid #3A3E47;font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#6B7180;white-space:nowrap}
+details.more{margin-top:48px}
+details.more>summary{font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;min-height:52px}
+details.more>.body{padding:0 18px 18px}

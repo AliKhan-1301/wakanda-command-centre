@@ -18,17 +18,16 @@ An interactive Board briefing for Team Wakanda's entry to the **MDX Human Capita
 
 ## The app
 
-Nine modules, meant to be walked in order. Use **Guided briefing** for presentation mode, with the arrow keys to move.
+Six pages in the order of the Board pitch, plus a three-page appendix. Use **Guided briefing** for presentation mode; the arrow keys or the Next button move through the pitch. Secondary detail on each page sits under "More detail".
 
-1. **Executive Briefing**: the answer, the price and the ask
-2. **Diagnosis**: three root-cause hypotheses, each with a test that could prove it wrong
-3. **Research**: key assumptions, the evidence register and the sources
-4. **Workbench**: live calculators for utilisation value, the 3% affordability test (including NEP's own cash-flow lines), cost sensitivity, and a 36-figure workbook check
-5. **Insights**: evidence → analysis → insight → decision chains
-6. **Recommendations**: the prioritisation matrix, the $2.14m retention bridge inside a $2.57m pool cap, and the 60/40 LTI
-7. **Implementation**: roadmap and spending gates, succession, and the communication plan
-8. **Performance**: KPIs with targets, owners and escalation triggers (no actuals: baselines don't exist yet)
-9. **Decision Room**: the five Board decisions
+1. **Briefing**: the answer, the year-one price and the ask
+2. **What's wrong**: three root-cause hypotheses, each with a 30-day test
+3. **The answer**: one owner per clock, where each Group executive goes, the roadmap and succession
+4. **The money**: live calculators for utilisation value, the 3% affordability test (including NEP's own cash-flow lines) and a 36-figure workbook check
+5. **Reward**: the three plans, the $2.14m retention bridge inside a $2.57m pool cap, the 60/40 LTI and the Group guardrails
+6. **The ask**: the five Board decisions
+
+Appendix: Evidence (key assumptions, evidence register, sources), Insights (evidence-to-decision chains) and KPIs.
 
 ## Run it locally
 
