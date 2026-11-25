@@ -80,6 +80,8 @@ V.briefing = () => {
   const P = D.payout.rows;
   return `
   <div class="ticker" aria-hidden="true"><div>${tick}${tick}</div></div>
+  <div class="sec" style="margin-top:8px">${secHead("<span class=\"kicker\" style=\"color:var(--ink);font-size:13px\">Situation</span>", "", "<span class=\"src\">Case facts · slide 3</span>")}
+    <div class="facts2">${fact("3", " mo", "to listing — an independent Board, RemCo and continuous disclosure arrive with it")}${fact("590", "k bpd", "one refinery and petrochemicals site, early ramp-up; ambition ≈1.1m bpd")}${fact("≈50", "", "executives run operations, the IPO and the expansion between them")}${fact("70%", "", "of the Group executive team's time goes to NEP", true)}</div></div>
   <section class="hero2">
     <div class="l">
       <div class="kicker">00 · Briefing · ${esc(D.meta.event)}</div>
@@ -93,8 +95,6 @@ V.briefing = () => {
       <p class="small muted" style="margin:0;border-top:1px solid var(--ink);padding-top:10px">Deck cover motif: the LIST clock nearly at twelve, inside the PROTECT ring — verify before money moves.</p>
     </div>
   </section>
-  <div class="sec">${secHead("<span class=\"kicker\" style=\"color:var(--ink);font-size:13px\">Situation</span>", "", "<span class=\"src\">Case facts · slide 3</span>")}
-    <div class="facts2">${fact("3", " mo", "to listing — an independent Board, RemCo and continuous disclosure arrive with it")}${fact("590", "k bpd", "one refinery and petrochemicals site, early ramp-up; ambition ≈1.1m bpd")}${fact("≈50", "", "executives run operations, the IPO and the expansion between them")}${fact("70%", "", "of the Group executive team's time goes to NEP", true)}</div></div>
   <section class="sec price">
     <div style="flex:1 1 340px;display:flex;flex-direction:column;gap:8px"><span class="kicker" style="color:var(--ink);font-size:13px">Year-one price tag</span><span class="bignum">$4.70m</span><span class="mono">At target · $5.88m at maximum payout · ${tag("assumption")} · slides 12, 17</span></div>
     <div style="flex:2 1 520px;display:flex;flex-direction:column;gap:14px">

@@ -207,7 +207,7 @@ details.ev .id{font-family:var(--mono);font-size:11px;color:var(--ink3);width:32
 #tip.on{opacity:1}
 
 /* Calculators */
-.calc{display:grid;grid-template-columns:340px 1fr;gap:32px}
+.calc{display:grid;grid-template-columns:340px minmax(0,1fr);gap:32px}
 .terminal{background:var(--ink);color:var(--bg);border-radius:28px;padding:36px}
 .terminal .seg{border-color:var(--bg)}.terminal .seg button{color:var(--bg)}.terminal .seg button.on{background:var(--bg);color:var(--ink)}
 .terminal .ctl label{color:#A3A9B4}.terminal .ctl label b{color:var(--bg)}
@@ -360,3 +360,6 @@ body.present #legend{display:none}
 details.more{margin-top:48px}
 details.more>summary{font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;min-height:52px}
 details.more>.body{padding:0 18px 18px}
+
+/* Grid and flex children may shrink below their content, so wide tables scroll inside their wrapper instead of pushing the page */
+.grid>*,.calc>*{min-width:0}
