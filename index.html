@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wakanda Command Centre</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header id="top">
+  <div class="bar">
+    <a class="brand" href="#briefing">WAKANDA<span> / </span>BOARD INTELLIGENCE</a>
+    <div class="top-actions">
+      <label class="search"><span class="sr">Search the engagement</span><input id="q" type="search" placeholder="Search evidence, decisions, KPIs  ( / )" autocomplete="off"><div id="results" role="listbox"></div></label>
+      <button class="btn gold" id="present" aria-pressed="false">Guided briefing →</button>
+    </div>
+  </div>
+  <nav id="nav" aria-label="Modules"></nav>
+</header>
+<div id="crumbs"></div>
+<main id="view" tabindex="-1"></main>
+<footer id="legend"></footer>
+<footer id="pager">
+  <button class="btn ghost" id="prev">← Previous</button>
+  <div id="progress"><div></div></div>
+  <span id="step"></span>
+  <button class="btn" id="next">Next →</button>
+</footer>
+<div id="tip" role="tooltip"></div>
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

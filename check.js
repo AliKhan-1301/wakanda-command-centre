@@ -1,0 +1,24 @@
+// Reconciles data.js with the deck's stated totals. Run: node check.js
+global.window = {}; require("./data.js"); const D = window.D, assert = require("assert");
+const near = (a, b, tol = 0.01, msg) => assert(Math.abs(a - b) <= tol, `${msg}: ${a} vs ${b}`);
+const sum = a => a.reduce((s, x) => s + x, 0);
+near(sum(D.costBuild.slice(0, 8).map(r => r.v)), 1978000, 0, "transition subtotal (slide 17)");
+near(sum(D.costBuild.map(r => r.v)), 4700500, 0, "first-year cash at target (slide 17)");
+D.payout.cols.forEach((c, i) => near(sum(D.payout.rows.map(r => r.v[i])), D.payout.total[i], 0.002, "payout " + c));
+D.payout.total.forEach((t, i) => near(t / 0.03, D.payout.cashNeeded[i], 0.1, "cash needed at 3%"));
+D.scenarios.forEach(s => { const tp = 590000 * 365 * s.u / 100 / 1e6; near(tp, s.tp, 0.06, s.n + " throughput"); near(2.1535 * s.m, s.v, 0.01, s.n + " point value"); });
+near(sum(D.bridge.map(b => b.tv)), 2137500, 0, "bridge target, named 16 (slide 10)");
+near(sum(D.bridge.map(b => b.mx)), 2671875, 0, "bridge maximum, named 16 (slide 10)");
+D.bridge.forEach(b => { near(b.base * 1e6 * b.pct / 100, b.tv, 0.5, b.n + " target"); near(b.tv * 1.25, b.mx, 0.5, b.n + " max"); });
+near(sum(D.bridge.map(b => b.tv)) / 3, 712500, 0, "tranche (three equal)");
+near(sum(D.bridge.map(b => b.tv)) + D.bridgeReserve.tv, D.bridgePool.tv, 0, "pool cap target");
+near(sum(D.bridge.map(b => b.mx)) + D.bridgeReserve.mx, D.bridgePool.mx, 0, "pool cap max");
+near(sum(D.decisionCosts), 4700500, 0, "decision costs = target cash");
+near(sum(D.ceoMix.map(r => r[1])), 1560000, 0, "CEO target pay");
+D.figureMap.forEach(r => assert(Math.abs(r[2] - r[3]) <= Math.max(5000, 0.01 * r[3]), "figure map: " + r[1]));
+near(sum(D.lti.map(l => l.tv)), 2580000, 0, "LTI grant (slide 11)");
+near(sum(D.sti.map(s => s.base * s.pct / 100)), 2.01, 0.001, "STI target (slide 17)");
+near(sum(D.scorecard.map(s => s.w)), 100, 0, "scorecard weights");
+near(1.978 + 2.7225 * 0.8, 4.16, 0.005, "salary −20%"); near(1.978 + 2.7225 * 1.2, 5.25, 0.005, "salary +20%");
+D.chains.forEach(c => c.e.forEach(id => assert(D.evidence.some(e => e.id === id), "missing evidence " + id)));
+console.log("All deck figures reconcile.");
